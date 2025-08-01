@@ -103,6 +103,10 @@ int ntpRetryCount = 0;
 unsigned long lastNtpStatusPrintTime = 0;
 const unsigned long ntpStatusPrintInterval = 1000;  // Print status every 1 seconds (adjust as needed)
 
+// --- NTP periodic sync ---
+const unsigned long ntpSyncInterval = 20UL * 1000UL; // Standard: 20 Sekunden, anpassbar
+unsigned long lastNtpSync = 0;
+
 // Non-blocking IP display globals
 bool showingIp = false;
 int ipDisplayCount = 0;
@@ -1319,9 +1323,23 @@ void loop() {
     lastColonBlink = millis();
   }
 
+
   static unsigned long ntpAnimTimer = 0;
   static int ntpAnimFrame = 0;
   static bool tzSetAfterSync = false;
+
+  // --- NTP periodic sync ---
+  if (millis() - lastNtpSync > ntpSyncInterval) {
+    lastNtpSync = millis();
+    // Starte NTP-Sync, falls nicht bereits im SYNCING-State
+    if (ntpState == NTP_IDLE || ntpState == NTP_SUCCESS || ntpState == NTP_FAILED) {
+      ntpState = NTP_SYNCING;
+      ntpRetryCount = 0;
+      ntpSyncSuccessful = false;
+      configTime(0, 0, ntpServer1, ntpServer2);
+      Serial.println(F("[NTP] Periodische Synchronisation gestartet."));
+    }
+  }
 
   static unsigned long lastFetch = 0;
   const unsigned long fetchInterval = 300000;  // 5 minutes
